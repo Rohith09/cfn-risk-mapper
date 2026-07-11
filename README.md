@@ -33,6 +33,14 @@ decisions.
 - Python 3.14+
 - [Checkov](https://www.checkov.io/) installed and on your `PATH`
 
+Checkov is a separate CLI dependency, not a Python package of this project -- it pins
+an old `networkx` that conflicts with the modern API `graph_builder.py` relies on.
+Install it in its own isolated environment with [pipx](https://pipx.pypa.io/):
+
+```bash
+pipx install checkov
+```
+
 ## Setup
 
 ```bash

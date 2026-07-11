@@ -72,3 +72,11 @@ Skeleton complete: all stage modules exist as stubs (`NotImplementedError`), CLI
 working `scan` command (`--template`, `--out`) that doesn't yet run the pipeline, tests
 cover `--help` output. venv created with Python 3.14 (via `brew install python@3.14`),
 deps installed, `pytest` passes. Next: implement Stage 2 (`detector.py`).
+
+Checkov is installed via `pipx` (`pipx install checkov`), not as a project dependency:
+Checkov pins `networkx<2.7`, which conflicts with the `networkx>=3.2` this project
+needs for `graph_builder.py`. This is fine because `detector.py` only ever shells out
+to the `checkov` binary as a subprocess -- it's never imported as a library -- so its
+dependencies don't need to share our venv.
+
+Public GitHub repo is live at github.com/Rohith09/cfn-risk-mapper (MIT licensed).
