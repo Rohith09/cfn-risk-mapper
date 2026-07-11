@@ -68,14 +68,30 @@ each stage as it's built:
 
 ## Current state
 
-CLI has a working `scan` command (`--template`, `--out`) that doesn't yet run the full
-pipeline. venv created with Python 3.14 (via `brew install python@3.14`), deps
-installed, `pytest` passes.
+v1 pipeline is fully wired and working end-to-end: `scan.sh --template <path> --out
+<path>` runs all 6 stages against a real CloudFormation JSON template and produces a
+Markdown report, verified live against `fixtures/sample.json`. venv created with Python
+3.14, deps installed, `pytest` passes (18 tests across all stages).
 
-Stage 2 (`detector.py`) is implemented: `run_checkov` shells out to Checkov, returns
-failed findings with `resource_type`/`logical_id` split out for later stages. Stages
-3-6 (`graph_builder.py`, `scorer.py`, `compliance_mapper.py`, `report_generator.py`)
-are still stubs. Next: implement Stage 3 (`graph_builder.py`).
+- `detector.py` -- `run_checkov` shells out to Checkov, returns failed findings with
+  `resource_type`/`logical_id` split out.
+- `graph_builder.py` -- `build_graph` walks Ref/Fn::GetAtt/Fn::Sub/DependsOn into a
+  networkx DiGraph (edge A -> B means "A references B").
+- `scorer.py` -- `score_finding(finding, graph, template)` (note: takes `template` too,
+  not just `graph`, since property-level signals need the resource's actual
+  `Properties`) combines type criticality, graph fan-in/out, and exposure signals into
+  `declared_exposure_score` (0.0-10.0).
+- `compliance_mapper.py` -- `map_to_controls` reads a hand-verified YAML table
+  (`data/nist_800_53_mappings.yaml`, 29 entries) of Checkov check ID -> NIST 800-53
+  control IDs.
+- `report_generator.py` -- renders `templates/report.md.j2` via Jinja2, grouping by the
+  2-letter NIST family code of each finding's first-listed control, ranked by
+  `declared_exposure_score` within each group; unmapped findings get their own section.
+- `cli.py` -- wires all of the above together and prints a rich summary table of the
+  top 10 findings to the terminal in addition to writing the report file.
+
+Next candidates: expand the NIST mapping table beyond the current 29 checks, or start
+on the v1.1 stretch goals (YAML template support, directory/multi-stack scanning).
 
 Checkov is installed via `pipx` (`pipx install checkov`), not as a project dependency:
 Checkov pins `networkx<2.7`, which conflicts with the `networkx>=3.2` this project
