@@ -68,10 +68,14 @@ each stage as it's built:
 
 ## Current state
 
-Skeleton complete: all stage modules exist as stubs (`NotImplementedError`), CLI has a
-working `scan` command (`--template`, `--out`) that doesn't yet run the pipeline, tests
-cover `--help` output. venv created with Python 3.14 (via `brew install python@3.14`),
-deps installed, `pytest` passes. Next: implement Stage 2 (`detector.py`).
+CLI has a working `scan` command (`--template`, `--out`) that doesn't yet run the full
+pipeline. venv created with Python 3.14 (via `brew install python@3.14`), deps
+installed, `pytest` passes.
+
+Stage 2 (`detector.py`) is implemented: `run_checkov` shells out to Checkov, returns
+failed findings with `resource_type`/`logical_id` split out for later stages. Stages
+3-6 (`graph_builder.py`, `scorer.py`, `compliance_mapper.py`, `report_generator.py`)
+are still stubs. Next: implement Stage 3 (`graph_builder.py`).
 
 Checkov is installed via `pipx` (`pipx install checkov`), not as a project dependency:
 Checkov pins `networkx<2.7`, which conflicts with the `networkx>=3.2` this project
