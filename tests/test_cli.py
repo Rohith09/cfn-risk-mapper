@@ -34,3 +34,29 @@ def test_scan_runs_the_full_pipeline_end_to_end(tmp_path):
     report_text = out_path.read_text()
     assert "## AC -- Access Control" in report_text
     assert "BroadRole" in report_text
+
+
+def test_scan_fails_the_build_when_a_finding_meets_the_threshold(tmp_path):
+    out_path = tmp_path / "report.md"
+    runner = CliRunner()
+
+    # BroadRole's wildcarded IAM policy scores 8.5 in the fixture.
+    result = runner.invoke(
+        cli, ["scan", "--template", str(FIXTURE), "--out", str(out_path), "--fail-on-score", "8.0"]
+    )
+
+    assert result.exit_code == 1
+    assert "failing the build" in result.output
+    # The report is still written even though the build is gated as failing.
+    assert out_path.exists()
+
+
+def test_scan_passes_when_nothing_meets_the_threshold(tmp_path):
+    out_path = tmp_path / "report.md"
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli, ["scan", "--template", str(FIXTURE), "--out", str(out_path), "--fail-on-score", "9.0"]
+    )
+
+    assert result.exit_code == 0, result.output

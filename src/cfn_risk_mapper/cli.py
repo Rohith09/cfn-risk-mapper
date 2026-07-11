@@ -33,7 +33,17 @@ def cli():
     type=click.Path(),
     help="Path to write the generated Markdown report.",
 )
-def scan(template, out):
+@click.option(
+    "--fail-on-score",
+    type=float,
+    default=None,
+    help=(
+        "Exit non-zero if any finding's declared_exposure_score is >= this value. "
+        "For CI gating -- e.g. `--fail-on-score 7` blocks the pipeline on highly "
+        "exposed findings while still writing the full report."
+    ),
+)
+def scan(template, out, fail_on_score):
     """Scan a CloudFormation template and generate a risk-prioritized report."""
     with open(template) as f:
         template_dict = json.load(f)
@@ -51,6 +61,15 @@ def scan(template, out):
     generate_report(findings, out, template_path=template)
 
     _print_summary(findings, out)
+
+    if fail_on_score is not None:
+        breaching = [f for f in findings if f["declared_exposure_score"] >= fail_on_score]
+        if breaching:
+            console.print(
+                f"[bold red]{len(breaching)} finding(s) at or above "
+                f"declared_exposure_score {fail_on_score}[/bold red] -- failing the build."
+            )
+            raise SystemExit(1)
 
 
 def _print_summary(findings, out):
