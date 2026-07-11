@@ -154,3 +154,84 @@ CKV_AWS_119:
   name: Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK
   controls: [SC-28]
   rationale: Direct protection-of-information-at-rest control, with a CMK for stronger key-management assurance.
+
+
+CKV_AWS_103:
+  name: Ensure that Load Balancer Listener is using at least TLS v1.2
+  controls: [SC-8, SC-13]
+  rationale: >-
+    Enforcing a modern TLS floor protects data in transit and constrains the
+    cryptographic mechanisms permitted for that protection.
+
+CKV_AWS_118:
+  name: Ensure that enhanced monitoring is enabled for Amazon RDS instances
+  controls: [SI-4]
+  rationale: Enhanced monitoring is the system-monitoring telemetry expected for detecting anomalous database behavior.
+
+CKV_AWS_131:
+  name: Ensure that ALB drops HTTP headers
+  controls: [SC-7]
+  rationale: Dropping invalid/duplicate headers at the load balancer is a boundary-protection control against request smuggling.
+
+CKV_AWS_149:
+  name: Ensure that Secrets Manager secret is encrypted using KMS CMK
+  controls: [SC-28, SC-12]
+  rationale: Protects stored secrets at rest and ties that protection to managed cryptographic key lifecycle controls.
+
+CKV_AWS_157:
+  name: Ensure that RDS instances have Multi-AZ enabled
+  controls: [CP-10]
+  rationale: Multi-AZ failover is the system-recovery mechanism that keeps the database available after a component failure.
+
+CKV_AWS_158:
+  name: Ensure that CloudWatch Log Group is encrypted by KMS
+  controls: [AU-9, SC-28]
+  rationale: Encrypting log data protects audit information from unauthorized access, and is also a data-at-rest control.
+
+CKV_AWS_174:
+  name: Verify CloudFront Distribution Viewer Certificate is using TLS v1.2 or higher
+  controls: [SC-8, SC-13]
+  rationale: Enforces a modern TLS floor for viewer-facing transport security, same reasoning as the ALB TLS check.
+
+CKV_AWS_2:
+  name: Ensure ALB protocol is HTTPS
+  controls: [SC-8]
+  rationale: A plaintext HTTP listener leaves data in transit unprotected.
+
+CKV_AWS_26:
+  name: Ensure all data stored in the SNS topic is encrypted
+  controls: [SC-28]
+  rationale: Direct protection-of-information-at-rest control.
+
+CKV_AWS_260:
+  name: "Ensure no security groups allow ingress from 0.0.0.0:0 to port 80"
+  controls: [SC-7]
+  rationale: >-
+    Open HTTP ingress from the internet is a boundary-protection concern. Unlike the
+    port 22/3389 checks (CKV_AWS_24/25), this isn't tagged as a remote-access control
+    since port 80 is an application port, not an administrative one.
+
+CKV_AWS_27:
+  name: Ensure all data stored in the SQS queue is encrypted
+  controls: [SC-28]
+  rationale: Direct protection-of-information-at-rest control.
+
+CKV_AWS_59:
+  name: Ensure there is no open access to back-end resources through API
+  controls: [AC-3, SC-7]
+  rationale: Prevents bypassing the API's authorization layer to reach backend integrations directly.
+
+CKV_AWS_68:
+  name: CloudFront Distribution should have WAF enabled
+  controls: [SC-7]
+  rationale: A WAF is a boundary-protection control that filters malicious requests before they reach the origin.
+
+CKV_AWS_7:
+  name: Ensure rotation for customer created CMKs is enabled
+  controls: [SC-12]
+  rationale: Key rotation is the cryptographic key-management lifecycle control expected for long-lived keys.
+
+CKV_AWS_86:
+  name: Ensure CloudFront Distribution has Access Logging enabled
+  controls: [AU-2, AU-12]
+  rationale: Same reasoning as the S3 access-logging check -- audit-event generation for a public-facing distribution.
