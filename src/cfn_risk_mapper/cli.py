@@ -65,13 +65,15 @@ def _print_summary(findings, out):
     table.add_column("Score", justify="right")
     table.add_column("Check")
     table.add_column("Resource")
+    table.add_column("Type")
     table.add_column("Controls")
 
     for finding in top_findings:
         table.add_row(
             f"{finding['declared_exposure_score']:.1f}",
             f"{finding['check_id']} {finding['check_name']}",
-            f"{finding['logical_id']} ({finding['resource_type']})",
+            finding["logical_id"],
+            finding["resource_type"],
             ", ".join(finding["controls"]) or "-",
         )
 

@@ -94,3 +94,13 @@ def test_generate_report_includes_declared_exposure_disclaimer(tmp_path):
 
     text = out_path.read_text()
     assert "not live AWS state" in text
+
+
+def test_generate_report_splits_resource_name_and_type_into_separate_columns(tmp_path):
+    out_path = tmp_path / "report.md"
+
+    generate_report([_BROAD_ROLE_FINDING], out_path)
+
+    text = out_path.read_text()
+    assert "| Score | Check | Resource | Type | Controls | Location |" in text
+    assert "`BroadRole` | AWS::IAM::Role |" in text
