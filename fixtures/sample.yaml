@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Sample template with intentionally misconfigured resources for cfn-risk-mapper
+  testing. YAML twin of sample.json, using short-form intrinsics, to exercise
+  YAML template support.
+Resources:
+  BroadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: OverlyBroadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "*"
+                Resource: "*"
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+  ProcessorFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: DataBucket
+    Properties:
+      FunctionName: cfn-risk-mapper-sample-processor
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt BroadRole.Arn
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref DataBucket
+      Code:
+        ZipFile: !Sub |
+          def handler(event, context):
+              return {'bucket': '${DataBucket}'}

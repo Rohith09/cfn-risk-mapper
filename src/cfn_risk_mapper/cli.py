@@ -1,7 +1,8 @@
 """CLI entrypoint. Thin click wrapper around the 5-stage pipeline."""
 
-import json
+from pathlib import Path
 
+import cfn_flip
 import click
 from rich.console import Console
 from rich.table import Table
@@ -14,6 +15,8 @@ from cfn_risk_mapper.scorer import score_finding
 
 console = Console()
 
+_TEMPLATE_GLOBS = ("*.json", "*.yaml", "*.yml")
+
 
 @click.group()
 def cli():
@@ -23,9 +26,17 @@ def cli():
 @cli.command()
 @click.option(
     "--template",
-    required=True,
     type=click.Path(exists=True, dir_okay=False),
-    help="Path to a CloudFormation JSON template.",
+    help="Path to a single CloudFormation template (JSON or YAML). Mutually exclusive with --template-dir.",
+)
+@click.option(
+    "--template-dir",
+    type=click.Path(exists=True, file_okay=False),
+    help=(
+        "Directory to recursively scan for CloudFormation templates (*.json, *.yaml, *.yml). "
+        "Each template is scanned independently (its own graph and scores) -- this does not "
+        "resolve Fn::ImportValue references across stacks. Mutually exclusive with --template."
+    ),
 )
 @click.option(
     "--out",
@@ -43,22 +54,23 @@ def cli():
         "exposed findings while still writing the full report."
     ),
 )
-def scan(template, out, fail_on_score):
-    """Scan a CloudFormation template and generate a risk-prioritized report."""
-    with open(template) as f:
-        template_dict = json.load(f)
+def scan(template, template_dir, out, fail_on_score):
+    """Scan CloudFormation template(s) and generate a risk-prioritized report."""
+    if bool(template) == bool(template_dir):
+        raise click.UsageError("Provide exactly one of --template or --template-dir.")
 
-    try:
-        findings = run_checkov(template)
-    except (CheckovNotFoundError, RuntimeError) as exc:
-        raise click.ClickException(str(exc))
+    template_paths = _discover_template_paths(template, template_dir)
 
-    graph = build_graph(template_dict)
-    for finding in findings:
-        finding["declared_exposure_score"] = score_finding(finding, graph, template_dict)
-        finding["controls"] = map_to_controls(finding["check_id"])
+    findings = []
+    for path in template_paths:
+        findings.extend(_scan_one(path))
 
-    generate_report(findings, out, template_path=template)
+    if template_dir:
+        report_label = f"{len(template_paths)} template(s) in {template_dir}"
+    else:
+        report_label = template
+
+    generate_report(findings, out, template_path=report_label)
 
     _print_summary(findings, out)
 
@@ -70,6 +82,37 @@ def scan(template, out, fail_on_score):
                 f"declared_exposure_score {fail_on_score}[/bold red] -- failing the build."
             )
             raise SystemExit(1)
+
+
+def _discover_template_paths(template, template_dir):
+    if template:
+        return [Path(template)]
+
+    paths = sorted(
+        {path for pattern in _TEMPLATE_GLOBS for path in Path(template_dir).rglob(pattern)}
+    )
+    if not paths:
+        raise click.ClickException(f"No CloudFormation templates found under {template_dir}.")
+    return paths
+
+
+def _scan_one(path):
+    try:
+        template_dict, _ = cfn_flip.load(path.read_text())
+    except Exception as exc:
+        raise click.ClickException(f"Could not parse {path} as CloudFormation JSON/YAML: {exc}")
+
+    try:
+        findings = run_checkov(path)
+    except (CheckovNotFoundError, RuntimeError) as exc:
+        raise click.ClickException(f"{path}: {exc}")
+
+    graph = build_graph(template_dict)
+    for finding in findings:
+        finding["declared_exposure_score"] = score_finding(finding, graph, template_dict)
+        finding["controls"] = map_to_controls(finding["check_id"])
+
+    return findings
 
 
 def _print_summary(findings, out):

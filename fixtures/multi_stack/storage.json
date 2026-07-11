@@ -1,0 +1,12 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Multi-stack directory-scan fixture: storage stack with a public S3 bucket.",
+  "Resources": {
+    "PublicStorageBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": "PublicRead"
+      }
+    }
+  }
+}

@@ -21,17 +21,22 @@ detection.
   DependsOn, Fn::Sub interpolation) -- not live AWS state. Docs and CLI output must be
   explicit about this distinction.
 - **No AWS credentials, no live account access.** Pure static analysis.
-- **v1 accepts CloudFormation JSON only, not YAML.** YAML's short-form intrinsics
-  (`!Ref`, `!GetAtt`) need cfn-flip or similar to normalize first -- deferred to v1.1.
+- **CloudFormation JSON and YAML are both supported** (short-form intrinsics like
+  `!Ref`/`!GetAtt` included) -- `cfn_flip.load()` normalizes either into the same
+  long-form dict `graph_builder.py` expects. Checkov itself already handles both
+  formats natively, so `detector.py` needed no changes for this.
 - **No web app, no database, no hosting.** A shell script wraps a Python CLI; output is
   a generated static Markdown report file. Nothing to deploy.
-- **Single-template scope.** Directory support for multi-stack `Fn::ImportValue`
-  resolution is a stretch goal, not v1.
+- **Directory scanning is independent per-file, not cross-stack.** `--template-dir`
+  scans every template under a directory and combines findings into one report, but
+  each template gets its own graph/scores -- no `Fn::ImportValue` resolution across
+  stacks. That remains a stretch goal, not implemented.
 
 ## Architecture (5 stages, keep as clearly separated modules)
 
-1. **Input** -- path to a single CFN JSON template, handled in `cli.py`. Directory
-   support is a stretch goal.
+1. **Input** -- `cli.py` accepts either `--template <file>` (JSON or YAML) or
+   `--template-dir <dir>` (recursively scans *.json/*.yaml/*.yml, each independently).
+   Cross-stack `Fn::ImportValue` resolution remains a stretch goal.
 2. **Detection** (`detector.py`) -- subprocess call to `checkov -f <template> -o json`,
    parse findings.
 3. **Graph builder** (`graph_builder.py`) -- parse the template's `Resources` block
@@ -66,15 +71,21 @@ each stage as it's built:
   via `Ref` (in an env var) and `Fn::Sub` (in inline code), plus an explicit
   `DependsOn: DataBucket`
 
+`fixtures/sample.yaml` -- YAML twin of `sample.json` using short-form intrinsics
+(`!GetAtt`, `!Ref`, `!Sub`), exercises YAML template support end-to-end.
+
+`fixtures/multi_stack/` -- two small independent templates (`network.json` with an
+open-ingress security group, `storage.json` with a public S3 bucket), used to test
+`--template-dir` aggregation.
+
 ## Current state
 
-v1 pipeline is fully wired and working end-to-end: `scan.sh --template <path> --out
-<path>` runs all 6 stages against a real CloudFormation JSON template and produces a
-Markdown report, verified live against `fixtures/sample.json`. venv created with Python
-3.14, deps installed, `pytest` passes (18 tests across all stages).
+v1 pipeline is fully wired and working end-to-end, including JSON/YAML and
+single-file/directory input. `pytest` passes (24 tests across all stages).
 
 - `detector.py` -- `run_checkov` shells out to Checkov, returns failed findings with
-  `resource_type`/`logical_id` split out.
+  `resource_type`/`logical_id` split out. Unchanged for YAML support -- Checkov
+  already handles CFN YAML natively, we just pass the original file path through.
 - `graph_builder.py` -- `build_graph` walks Ref/Fn::GetAtt/Fn::Sub/DependsOn into a
   networkx DiGraph (edge A -> B means "A references B").
 - `scorer.py` -- `score_finding(finding, graph, template)` (note: takes `template` too,
@@ -82,16 +93,22 @@ Markdown report, verified live against `fixtures/sample.json`. venv created with
   `Properties`) combines type criticality, graph fan-in/out, and exposure signals into
   `declared_exposure_score` (0.0-10.0).
 - `compliance_mapper.py` -- `map_to_controls` reads a hand-verified YAML table
-  (`data/nist_800_53_mappings.yaml`, 29 entries) of Checkov check ID -> NIST 800-53
-  control IDs.
+  (`data/nist_800_53_mappings.yaml`, 44 entries) of Checkov check ID -> NIST 800-53
+  control IDs. Expanded from the initial 29 after testing against a real multi-tier
+  template surfaced 15 more check IDs with no mapping.
 - `report_generator.py` -- renders `templates/report.md.j2` via Jinja2, grouping by the
   2-letter NIST family code of each finding's first-listed control, ranked by
   `declared_exposure_score` within each group; unmapped findings get their own section.
-- `cli.py` -- wires all of the above together and prints a rich summary table of the
+  Resource name and type are separate table columns (not combined "Name (Type)").
+- `cli.py` -- accepts `--template` (single file) or `--template-dir` (recursive,
+  independent per-file scan, findings combined into one report); loads templates via
+  `cfn_flip.load()` so JSON and YAML both normalize to the same long-form dict; supports
+  `--fail-on-score` to exit non-zero for CI gating; prints a rich summary table of the
   top 10 findings to the terminal in addition to writing the report file.
 
-Next candidates: expand the NIST mapping table beyond the current 29 checks, or start
-on the v1.1 stretch goals (YAML template support, directory/multi-stack scanning).
+Next candidates: cross-stack `Fn::ImportValue` resolution (the remaining stretch
+goal), further expanding the NIST mapping table as new real-world templates surface
+gaps, or a sample GitHub Actions workflow file committed to the repo.
 
 Checkov is installed via `pipx` (`pipx install checkov`), not as a project dependency:
 Checkov pins `networkx<2.7`, which conflicts with the `networkx>=3.2` this project

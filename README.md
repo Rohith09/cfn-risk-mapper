@@ -24,9 +24,10 @@ and groups the results by the NIST 800-53 control family they map to.
 
 ## Status
 
-Early development. v1 targets CloudFormation **JSON** templates only (YAML support is
-deferred to v1.1). See [CLAUDE.md](CLAUDE.md) for the full architecture and scope
-decisions.
+Early development. Accepts both CloudFormation **JSON and YAML** (short-form
+intrinsics like `!Ref`/`!GetAtt` included, normalized via `cfn-flip`), and can scan
+either a single template or a whole directory of them. See [CLAUDE.md](CLAUDE.md) for
+the full architecture and scope decisions.
 
 ## Requirements
 
@@ -54,6 +55,17 @@ pip install -e ".[dev]"
 ```bash
 ./scan.sh --template path/to/template.json --out report.md
 ```
+
+Or scan every template (JSON or YAML) in a directory, recursively, aggregated into
+one report:
+
+```bash
+./scan.sh --template-dir path/to/infra/ --out report.md
+```
+
+Each template found is scanned **independently** -- its own dependency graph, its own
+scores. This does not resolve `Fn::ImportValue` references between stacks; that
+cross-stack resolution remains a stretch goal (see CLAUDE.md).
 
 ### CI gating
 
@@ -84,9 +96,9 @@ A minimal GitHub Actions step:
     path: cfn-risk-report.md
 ```
 
-Note the current v1 scope limits: **JSON templates only** (convert YAML with
-`cfn-flip` first) and **one template per invocation** (loop over multiple stack
-files if your repo has more than one).
+Remaining v1 scope limit: no cross-stack `Fn::ImportValue` resolution when scanning
+a directory -- each template's exposure score reflects only its own declared
+relationships, not references into or out of sibling stacks.
 
 ## License
 
