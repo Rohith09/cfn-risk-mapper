@@ -1,16 +1,74 @@
+<div align="center">
+
 # cfn-risk-mapper
 
-A CLI tool that wraps [Checkov](https://www.checkov.io/) to prioritize CloudFormation
-security findings by **declared exposure** and maps them to NIST 800-53 controls.
+**Prioritizes CloudFormation security findings by declared exposure, and maps them to NIST 800-53 controls.**
 
-## Problem
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Built on Checkov](https://img.shields.io/badge/scanner-checkov-5C4EE5)](https://www.checkov.io/)
+[![Static analysis only](https://img.shields.io/badge/analysis-static%20only-2ea44f)](#what-this-is-not)
+
+</div>
+
+---
 
 Checkov and similar scanners flag every misconfiguration with equal visual weight. A
 scan can return 50+ findings with no sense of which ones actually matter given how
 resources connect to each other. `cfn-risk-mapper` adds a synthesis layer on top of
 Checkov's detection: it builds a graph of how resources in your template reference
-each other, scores each finding by how exposed that resource is *within the template*,
-and groups the results by the NIST 800-53 control family they map to.
+each other, scores each finding by how exposed that resource is *within the
+template*, and groups the results by the NIST 800-53 control family they map to.
+
+## Contents
+
+- [How it works](#how-it-works)
+- [Example output](#example-output)
+- [What this is not](#what-this-is-not)
+- [Status](#status)
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [Usage](#usage)
+- [CI gating](#ci-gating)
+- [License](#license)
+
+## How it works
+
+A `scan` run pushes a template through five stages:
+
+| Stage | Module | What it does |
+|---|---|---|
+| 1. Detect | `detector.py` | Shells out to `checkov -f <template> -o json`; never reimplements its rules |
+| 2. Graph | `graph_builder.py` | Parses `Ref`/`Fn::GetAtt`/`Fn::Sub`/`DependsOn` into a networkx graph of declared relationships |
+| 3. Score | `scorer.py` | Combines resource criticality, graph fan-in/out, and property-level red flags into a `declared_exposure_score` |
+| 4. Map | `compliance_mapper.py` | Looks up each Checkov check ID against a hand-verified NIST 800-53 table |
+| 5. Report | `report_generator.py` | Renders one Markdown file, grouped by control family, ranked by score |
+
+## Example output
+
+Running `scan` against `fixtures/sample.json` (a wildcard IAM role, a public S3
+bucket, and a Lambda that references both) produces:
+
+```markdown
+# cfn-risk-mapper Report
+Template scanned: `fixtures/sample.json`
+Total findings: 18
+
+> declared_exposure_score reflects only what is declared in the given
+> template(s) -- not live AWS state. It is not a blast-radius measurement.
+
+## AC -- Access Control
+
+| Score | Check                                          | Resource   | Type            | Controls   |
+|------:|-------------------------------------------------|------------|-----------------|------------|
+|   8.5 | CKV_AWS_108 IAM policy allows data exfiltration | BroadRole  | AWS::IAM::Role  | AC-4, SC-7 |
+|   8.5 | CKV_AWS_63  Wildcard "*" statement actions       | BroadRole  | AWS::IAM::Role  | AC-6       |
+|   7.0 | CKV_AWS_20  S3 bucket allows public READ         | DataBucket | AWS::S3::Bucket | AC-3       |
+```
+
+The wildcarded IAM role ranks highest, the public bucket next, and a Lambda that
+merely *references* both (with no exposure signals of its own) ranks lowest --
+exactly the triage signal a flat Checkov scan doesn't give you.
 
 ## What this is not
 
@@ -67,7 +125,7 @@ Each template found is scanned **independently** -- its own dependency graph, it
 scores. This does not resolve `Fn::ImportValue` references between stacks; that
 cross-stack resolution remains a stretch goal (see CLAUDE.md).
 
-### CI gating
+## CI gating
 
 Pass `--fail-on-score` to make `scan` exit non-zero when any finding's
 `declared_exposure_score` meets or exceeds the given value -- the full report is
@@ -79,7 +137,8 @@ remember to go read:
 ./scan.sh --template path/to/template.json --out report.md --fail-on-score 7
 ```
 
-A minimal GitHub Actions step:
+<details>
+<summary>Minimal GitHub Actions step</summary>
 
 ```yaml
 - name: Install cfn-risk-mapper and Checkov
@@ -95,6 +154,8 @@ A minimal GitHub Actions step:
     name: cfn-risk-report
     path: cfn-risk-report.md
 ```
+
+</details>
 
 Remaining v1 scope limit: no cross-stack `Fn::ImportValue` resolution when scanning
 a directory -- each template's exposure score reflects only its own declared
