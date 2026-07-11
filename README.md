@@ -46,8 +46,15 @@ A `scan` run pushes a template through five stages:
 
 ## Example output
 
-Running `scan` against `fixtures/sample.json` (a wildcard IAM role, a public S3
-bucket, and a Lambda that references both) produces:
+Terminal output from a `scan` run against a larger, real-world multi-tier template
+(ALB, security groups, IAM policies, RDS) -- the top 10 findings by
+`declared_exposure_score`, printed alongside the full Markdown report:
+
+![Terminal output showing the top findings table, ranked by declared_exposure_score, with Score/Check/Resource/Type/Controls columns](docs/scan-example.png)
+
+The Markdown report itself groups every finding (not just the top 10) by NIST
+control family. Running `scan` against `fixtures/sample.json` (a wildcard IAM role, a
+public S3 bucket, and a Lambda that references both) produces:
 
 ```markdown
 # cfn-risk-mapper Report
