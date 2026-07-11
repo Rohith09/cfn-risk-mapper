@@ -1,0 +1,156 @@
+# Hand-verified mapping of Checkov CloudFormation check IDs to NIST 800-53
+# Rev 5 control IDs. Not bulk-generated -- each entry below was checked
+# against the actual Checkov check implementation and a considered read of
+# the relevant NIST control text. Extend deliberately; don't autogenerate.
+
+CKV_AWS_107:
+  name: Ensure IAM policies does not allow credentials exposure
+  controls: [AC-6, IA-5]
+  rationale: >-
+    Blocks IAM actions that expose or mint credentials (e.g. iam:CreateAccessKey),
+    which is both a least-privilege violation and an authenticator-management concern.
+
+CKV_AWS_108:
+  name: Ensure IAM policies does not allow data exfiltration
+  controls: [AC-4, SC-7]
+  rationale: >-
+    Restricts IAM actions that could move data across a trust boundary
+    (e.g. unrestricted s3:GetObject/ec2:CopySnapshot), which is an information
+    flow enforcement and boundary protection concern.
+
+CKV_AWS_109:
+  name: Ensure IAM policies does not allow permissions management without constraints
+  controls: [AC-6]
+  rationale: Unconstrained IAM-management actions let a principal grant itself more access than intended.
+
+CKV_AWS_110:
+  name: Ensure IAM policies does not allow privilege escalation
+  controls: [AC-6]
+  rationale: Directly maps to least privilege -- a principal should not be able to escalate its own permissions.
+
+CKV_AWS_111:
+  name: Ensure IAM policies does not allow write access without constraints
+  controls: [AC-3, AC-6]
+  rationale: Unconstrained write actions bypass access enforcement and violate least privilege.
+
+CKV_AWS_115:
+  name: Ensure that AWS Lambda function is configured for function-level concurrent execution limit
+  controls: [SC-5]
+  rationale: A concurrency limit is a resource-exhaustion control, i.e. denial-of-service protection.
+
+CKV_AWS_116:
+  name: Ensure that AWS Lambda function is configured for a Dead Letter Queue(DLQ)
+  controls: [SI-4]
+  rationale: A DLQ ensures failed invocations are captured for review rather than silently dropped.
+
+CKV_AWS_117:
+  name: Ensure that AWS Lambda function is configured inside a VPC
+  controls: [SC-7, AC-4]
+  rationale: Placing a function inside a VPC subjects its network path to boundary protection and flow enforcement.
+
+CKV_AWS_173:
+  name: Check encryption settings for Lambda environment variable
+  controls: [SC-28]
+  rationale: Environment variables can carry secrets/config; encrypting them protects information at rest.
+
+CKV_AWS_18:
+  name: Ensure the S3 bucket has access logging enabled
+  controls: [AU-2, AU-12]
+  rationale: Access logging is the audit-event generation NIST expects for object-store access.
+
+CKV_AWS_20:
+  name: Ensure the S3 bucket does not allow READ permissions to everyone
+  controls: [AC-3]
+  rationale: A public-read ACL is a direct access-enforcement failure.
+
+CKV_AWS_21:
+  name: Ensure the S3 bucket has versioning enabled
+  controls: [CP-9]
+  rationale: Versioning is the mechanism that makes object-level recovery/backup possible.
+
+CKV_AWS_53:
+  name: Ensure S3 bucket has block public ACLs enabled
+  controls: [AC-3]
+  rationale: Account-level ACL blocking is an access-enforcement control.
+
+CKV_AWS_54:
+  name: Ensure S3 bucket has block public policy enabled
+  controls: [AC-3]
+  rationale: Blocking public bucket policies is an access-enforcement control.
+
+CKV_AWS_55:
+  name: Ensure S3 bucket has ignore public ACLs enabled
+  controls: [AC-3]
+  rationale: Ignoring public ACLs is an access-enforcement control.
+
+CKV_AWS_56:
+  name: Ensure S3 bucket has RestrictPublicBuckets enabled
+  controls: [AC-3]
+  rationale: Restricting public bucket policies cross-account is an access-enforcement control.
+
+CKV_AWS_62:
+  name: Ensure no IAM policies that allow full "*-*" administrative privileges are not created
+  controls: [AC-6]
+  rationale: A blanket admin policy is the textbook least-privilege violation.
+
+CKV_AWS_63:
+  name: Ensure no IAM policies documents allow "*" as a statement's actions
+  controls: [AC-6]
+  rationale: Wildcard actions grant far more than the principal needs -- a least-privilege violation.
+
+CKV_AWS_24:
+  name: Ensure no security groups allow ingress from 0.0.0.0/0 to port 22
+  controls: [AC-17, SC-7]
+  rationale: Open SSH ingress is both an unrestricted remote-access path and a boundary-protection failure.
+
+CKV_AWS_25:
+  name: Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389
+  controls: [AC-17, SC-7]
+  rationale: Open RDP ingress is both an unrestricted remote-access path and a boundary-protection failure.
+
+CKV_AWS_23:
+  name: Ensure every security groups rule has a description
+  controls: [CM-6]
+  rationale: Rule descriptions are what make firewall configuration auditable against an approved baseline.
+
+CKV_AWS_79:
+  name: Ensure Instance Metadata Service Version 1 is not enabled
+  controls: [AC-6, SC-7]
+  rationale: >-
+    IMDSv1 is a common SSRF-to-credential-theft path; requiring IMDSv2 constrains what a
+    compromised process can reach, i.e. least privilege and boundary protection.
+
+CKV_AWS_16:
+  name: Ensure all data stored in the RDS is securely encrypted at rest
+  controls: [SC-28]
+  rationale: Direct protection-of-information-at-rest control.
+
+CKV_AWS_17:
+  name: Ensure all data stored in RDS is not publicly accessible
+  controls: [AC-3, SC-7]
+  rationale: A publicly reachable database is an access-enforcement and boundary-protection failure.
+
+CKV_AWS_161:
+  name: Ensure RDS database has IAM authentication enabled
+  controls: [IA-2]
+  rationale: IAM database authentication is identification-and-authentication for organizational users.
+
+CKV_AWS_3:
+  name: Ensure all data stored in the EBS is securely encrypted
+  controls: [SC-28]
+  rationale: Direct protection-of-information-at-rest control.
+
+CKV_AWS_8:
+  name: Ensure all data stored in the Launch configuration EBS is securely encrypted
+  controls: [SC-28]
+  rationale: Direct protection-of-information-at-rest control, applied at the launch-config level.
+
+CKV_AWS_19:
+  name: Ensure the S3 bucket has server-side-encryption enabled
+  controls: [SC-28]
+  rationale: Direct protection-of-information-at-rest control.
+
+CKV_AWS_119:
+  name: Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK
+  controls: [SC-28]
+  rationale: Direct protection-of-information-at-rest control, with a CMK for stronger key-management assurance.
