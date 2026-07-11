@@ -1,0 +1,31 @@
+# cfn-risk-mapper Report
+{% if template_path %}
+Template scanned: `{{ template_path }}`
+{% endif %}
+Total findings: {{ total_findings }}
+
+> **declared_exposure_score** reflects only what is declared in the given
+> template(s) -- `Ref`, `Fn::GetAtt`, `DependsOn`, `Fn::Sub` interpolation --
+> not live AWS state. It is not a blast-radius measurement.
+
+{% for group in groups %}
+## {{ group.family_code }} -- {{ group.family_name }}
+
+| Score | Check | Resource | Controls | Location |
+|------:|-------|----------|----------|----------|
+{% for finding in group.findings %}
+| {{ "%.1f"|format(finding.declared_exposure_score) }} | `{{ finding.check_id }}` {{ finding.check_name }} | `{{ finding.logical_id }}` ({{ finding.resource_type }}) | {{ finding.controls|join(", ") }} | {{ finding.file_path }}:{{ finding.file_line_range[0] }} |
+{% endfor %}
+
+{% endfor %}
+{% if unmapped %}
+## Unmapped findings
+
+No NIST 800-53 control mapping exists yet for these checks.
+
+| Score | Check | Resource | Location |
+|------:|-------|----------|----------|
+{% for finding in unmapped %}
+| {{ "%.1f"|format(finding.declared_exposure_score) }} | `{{ finding.check_id }}` {{ finding.check_name }} | `{{ finding.logical_id }}` ({{ finding.resource_type }}) | {{ finding.file_path }}:{{ finding.file_line_range[0] }} |
+{% endfor %}
+{% endif %}
