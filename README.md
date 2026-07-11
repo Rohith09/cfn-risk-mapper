@@ -55,6 +55,39 @@ pip install -e ".[dev]"
 ./scan.sh --template path/to/template.json --out report.md
 ```
 
+### CI gating
+
+Pass `--fail-on-score` to make `scan` exit non-zero when any finding's
+`declared_exposure_score` meets or exceeds the given value -- the full report is
+still written either way. This is what lets a CI pipeline actually block a PR on
+highly-exposed findings, instead of just producing a report someone has to
+remember to go read:
+
+```bash
+./scan.sh --template path/to/template.json --out report.md --fail-on-score 7
+```
+
+A minimal GitHub Actions step:
+
+```yaml
+- name: Install cfn-risk-mapper and Checkov
+  run: |
+    pipx install checkov
+    pip install -e ".[dev]"
+- name: Scan CloudFormation template
+  run: ./scan.sh --template infra/template.json --out cfn-risk-report.md --fail-on-score 7
+- name: Upload report
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: cfn-risk-report
+    path: cfn-risk-report.md
+```
+
+Note the current v1 scope limits: **JSON templates only** (convert YAML with
+`cfn-flip` first) and **one template per invocation** (loop over multiple stack
+files if your repo has more than one).
+
 ## License
 
 [MIT](LICENSE)
