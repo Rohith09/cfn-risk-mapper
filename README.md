@@ -22,17 +22,17 @@ template*, and groups the results by the NIST 800-53 control family they map to.
 
 ## Contents
 
-- [How it works](#how-it-works)
-- [Example output](#example-output)
-- [What this is not](#what-this-is-not)
-- [Status](#status)
-- [Requirements](#requirements)
-- [Setup](#setup)
-- [Usage](#usage)
-- [CI gating](#ci-gating)
-- [License](#license)
+- [🔍 How it works](#how-it-works)
+- [📋 Example output](#example-output)
+- [🚫 What this is not](#what-this-is-not)
+- [🚧 Status](#status)
+- [📦 Requirements](#requirements)
+- [⚙️ Setup](#setup)
+- [▶️ Usage](#usage)
+- [🚦 CI gating](#ci-gating)
+- [📄 License](#license)
 
-## How it works
+## 🔍 How it works
 
 A `scan` run pushes a template through five stages:
 
@@ -44,7 +44,7 @@ A `scan` run pushes a template through five stages:
 | 4. Map | `compliance_mapper.py` | Looks up each Checkov check ID against a hand-verified NIST 800-53 table |
 | 5. Report | `report_generator.py` | Renders one Markdown file, grouped by control family, ranked by score |
 
-## Example output
+## 📋 Example output
 
 Terminal output from a `scan` run against a larger, real-world multi-tier template
 (ALB, security groups, IAM policies, RDS) -- the top 10 findings by
@@ -77,24 +77,24 @@ The wildcarded IAM role ranks highest, the public bucket next, and a Lambda that
 merely *references* both (with no exposure signals of its own) ranks lowest --
 exactly the triage signal a flat Checkov scan doesn't give you.
 
-## What this is not
+## 🚫 What this is not
 
-- **Not a scanner.** It never reimplements CloudFormation security rule detection --
+- ❌ **Not a scanner.** It never reimplements CloudFormation security rule detection --
   it always shells out to Checkov for that.
-- **Not a blast-radius calculator.** The `declared_exposure_score` is computed only
+- ❌ **Not a blast-radius calculator.** The `declared_exposure_score` is computed only
   from what's declared in the template(s) given (`Ref`, `Fn::GetAtt`, `DependsOn`,
   `Fn::Sub` interpolation) -- not live AWS state.
-- **Not connected to your AWS account.** No credentials, no live account access. Pure
+- ❌ **Not connected to your AWS account.** No credentials, no live account access. Pure
   static analysis.
 
-## Status
+## 🚧 Status
 
 Early development. Accepts both CloudFormation **JSON and YAML** (short-form
 intrinsics like `!Ref`/`!GetAtt` included, normalized via `cfn-flip`), and can scan
 either a single template or a whole directory of them. See [CLAUDE.md](CLAUDE.md) for
 the full architecture and scope decisions.
 
-## Requirements
+## 📦 Requirements
 
 - Python 3.14+
 - [Checkov](https://www.checkov.io/) installed and on your `PATH`
@@ -107,7 +107,7 @@ Install it in its own isolated environment with [pipx](https://pipx.pypa.io/):
 pipx install checkov
 ```
 
-## Setup
+## ⚙️ Setup
 
 ```bash
 python3 -m venv .venv
@@ -115,7 +115,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-## Usage
+## ▶️ Usage
 
 ```bash
 ./scan.sh --template path/to/template.json --out report.md
@@ -132,7 +132,7 @@ Each template found is scanned **independently** -- its own dependency graph, it
 scores. This does not resolve `Fn::ImportValue` references between stacks; that
 cross-stack resolution remains a stretch goal (see CLAUDE.md).
 
-## CI gating
+## 🚦 CI gating
 
 Pass `--fail-on-score` to make `scan` exit non-zero when any finding's
 `declared_exposure_score` meets or exceeds the given value -- the full report is
@@ -168,6 +168,6 @@ Remaining v1 scope limit: no cross-stack `Fn::ImportValue` resolution when scann
 a directory -- each template's exposure score reflects only its own declared
 relationships, not references into or out of sibling stacks.
 
-## License
+## 📄 License
 
 [MIT](LICENSE)
